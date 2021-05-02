@@ -1,0 +1,915 @@
+
+하나로 0.93
+Crossvali 0.92
+
+1.Timeseries -> 0.92
+2.Strait kfold - > 0.9366 10 0.9363 -- 당첨  5Fold ★
+3.Kfold  random - > 0.9361
+
+그다음 Kfold 를 5 , 10, 15로 나눠서 해볼것
+
+
+4. train말고 classifier로 바꿔서 데이터전부다 넣어서 fit 하자
+   -> 0.9347
+
+5. 4번 + card1_count_full 추가 - 이전것 -V23 0.9358
+	신규 컬럼들 추가 C~M
+
+6. strait + 컬럼추가 - V26  -  0.9375  ★
+
+7. 신규 parameter찾기 - timeseries V29 --drop
+
+8. 신규 Parameter찾기 -stratit  W30 -- drop 
+
+9. 8번 + learning rate 조정 , W35, W36, W38 -- drop 
+
+10. 모델 저장코드 V39  이게 중요  
+	  ,, seed 70 : v45    
+	seed 4 V46 , seed 42로 변경 : V47
+	seed 9  v48  , seed 33 v49, seed 40 V50 - V58
+	seed 79  v51- v57  , seed 45 v53 -V56
+
+10-1 신규 parameter V40 0.9353
+10-2 신규 parameter V54 0.9361
+10-3 Best kernel para V55 0.9370  -- Best para 비교했는데 성능 떨어진다.
+	(0.9449) https://www.kaggle.com/davidcairuz/feature-engineering-lightgbm-corrected/output
+
+11. 8번 _ Xgboost Best Parameter만 찾기  V4 
+12. Xgboost + baysian V5-drop , v6, v7 v8
+
+→ Parameter를 변경한다고해서 더 나아지진 않는다.
+  Input이 잘못되어 있다. Garbage in garbage out 8/18
+
+이제부턴 EDA!! 하나씩 까봐야한다.
+
+
+
+13. 필사하기
+https://www.kaggle.com/c/ieee-fraud-detection/discussion/104142#latest-601627
+
+
+- kaggle 커널 정리 + base Line 정리 + 코드 정리
+
+14 LB 0.9429 : 그대로 돌리기 V03 - 0.9429 그대로 나옴 ★
+15.LG 0.9429 : Parameter 찾아보기 -- 잘찾아지나? - V04
+   → 못찾는다 CV 0.88이 나온다 -> 범위를 좁혀서 오랫동안 돌려보자 V11 V1 0 -- 잘찾아진다.
+16. 기존것에서 sort_value를 제외하고 돌려보자 V61 0.78
+   → 아예 못찾는다.0.78 -> 범위를 좁혀보자 V62 -- 0.80 그래도 못찾는다
+
+
+17. 컬럼을 하나씩 추가해보자 0.9430
+- card ID에 대한 컬럼 추가 V13 0.9427
+- Freq encoding 추가 V15  0.9451
+- features interaction 추가 V16 0.9461 
+- card ID 컬럼 제거 v18
+- V19 'is_unbalance': true 0.9416
+- V21 최근 10일 통계량 컬럼 추가 0.9155 
+- V22 R_emaildomain 머지 및 정리 0.9155 - 에러발생
+- V23 New Para 0.9368 짜리  -- 
+- V24 최근 5일 평균 통계량 - 뉴 Para  -> 0.9460
+- V26 최근 5일 평균 통계량 - 기존 Para  - 0.9459
+- V27 transactionAmt log 취하기 0.9460
+- V33,34,35 : 신규 Parameter : 0.9459 
+- V54,V55 : 신규 Paraemter : 0.9465/ 0.9467 : Parameter Tuning이 성과가 있다 ★ 190824 15시 
+
+18. 반복횟수를 늘려서 Best인 Parameter를 찾아보자
+- Num_leaves 범위 확장 500 이상으로 확장 / min_data_in_leaf : 100 이하로 확장
+- learning rate 하한 0.0065 변경
+ → Seed를 바꿔가면서 10개 돌려보자 V36~ V47 : 0.9094를 넘는걸 찾자
+  105/150/160/165/99/88/77/205/169/198/277
+
+
+19.learning rate, num_leaves를 위로 확장하고 , min_data_in_leaf를 내리자  
+      277 / 199 / 165 / 99 / 12 / 33 /230   - 0.9131을 넘는 걸찾자  -> 0.9161 이있다.
+     - V56,57,58
+
+
+20. train_auc가 0.9998 이다. 거의다 맞추고 있다는 이야기. 190824 10시
+     -> Feature가 더 필요하다 : train/val data간에 분포 차이가 있다
+     -> 0.9461 나왔던 Feature로도 충분할듯?
+     -> CV 0.9368 vs  LB 0.9461 : Overfitting 된것은 아닌듯하다.
+     -> Training set에서 더 배워야하는데 못배우고 있는 것
+	-> Feature를 찾아주는 방법  
+     -> Null 값을 채워주자 simpleimputer + Undersampling?
+-
+
+
+21 아직 Underfitting 되어 있다. 더 학습할 수 있다.  0.91626 을 넘는것을 찾자
+   Num_leaves 800이상으로 늘리자 1000까지,  + max_bin 추가
+	
+	132, 99 ,12, 165,199 , 277 ,399, 355,499 / V70~78  -> 메모리 과부하 발생
+    	-> max_bin 2로 하니까 에러가 발생한다 -> 메모리 과부하로 추정 , maxbin 125이상으로 수정
+	132, 99 ,12, 165,199 , 277 ,399, 355,499/ V86~92  
+        → 과부하없이 잘 되었다. max_bin은 많이 안줄어든다.
+	   learning rate 범위를 조금 올리고, num_leaves 도 올리자 , 0.9198 넘는걸찾자
+	V96~
+
+	Parameter 재조정 : 0.9215 넘는 것을 찾자 
+
+22 New Parameter 결과 V66/67/69 /V93 : 0.9467 / 0.9469★ / 0.9468  / 0.9465 - Overfit?
+  New Para V109/ 110 : 0.9474 ★
+  Best 성적(V67 +StratifiedKFold,0.9469) V102 : 0.9473 ★  : 전부다 변경하자 이제 
+  Best 성적 + kFold + 신규 feature(M_sum~) V105 : 0.9466 : 빼는게 낫다?
+  Best 성적 + 신규 Feature + Fold수 줄이기 5->3 V106  : 늘리기도해봐야해 -에러 발생 : 다시하자
+  New Para V112/ 113 : 
+	Train AUC가 1인데 더 학습할 것이 있나?
+	→ Data Augmentation 방법이 있다 ! 공부하자!  : V121
+          - Fold 마다 3번씩 반복 해주자 !! 다른 결과가 나온다!
+        You can get different results depending on RNG (different columns subsampled, different bagging, etc etc.), this just increases confidence that your CV error for that fold. It is a way of cutting down noise in your CV.
+
+   Best 성적( 0.9474 + Data Augmentation) : V123   -> 메모리에러
+
+
+19. parameter에 small max_bin - Overfitting 하락 (Large maxbin -Train accuracy 상승) 추가하기
+	→ small number of bins may reduce training accuracy but may increase general power (deal with over-fitting) 
+    → max_bin 200으로 낮춰봐야겠다 - gridsearch 활용 - 학습할때 데이터를 partitioning 하여 움직이는데 그때 사용되는 값
+       max_bin이 작아질수록 speed가 높아진다
+
+large num_leaves - Overfitting 위험 
+
+학습할 꺼리가 없나?
+
+
+20. 더이상 LB가 개선되지 않는다. Data Augmentation을 시행하는데 Class=1인것은 다 넣고
+    Class=0인 것은 선별적으로 넣는 것으로해보자  -- 이건 잘 안되니까 우선 빼고
+    또한 CV 산포를 줄이기 위해 fold당 3회씩 반복시키자
+    
+    - Best 성적 보인 3개를 CV+ Data Augmentation 해보자  : V 15  ( 74 73 71) V18 V19  : <0.9469
+    - 이번에 발굴된 Para 2개를 넣어보자 V16 17 <0.9469
+
+21. Parameter Tuning 단계에 Data Augmentaion + CV를 넣어보자 그전에 Pickle이 필요하다.
+    -> bagging_seed 를 11로 고정해둬서 Fold내 CV를 추가할 이유가 없다. 결과가 똑같다.
+    → 다시 Tuning V23~27
+
+22. Class 가 1인 것들을 Augmentation을 해서 학습을 시켰다. Train auc 가 1로 모두 학습이 되었는데
+    Val_acc는 오히려 감소했다. - 방해되는 감이 있다.
+    Class가 0인것을 Random하게 뽑아서 섞어보자
+
+23. earlystopping rounds를 500까지 늘려보자
+	- Best 성적 보인 3개 : V29 V30 V31
+
+24. uid 와 uid 별 D1-15 aggregation을 진행했다.  LB : 0.9492 / : CV 0.976917
+	- uid 별 평균 얼마나 한번씩 거래를 하는지와 관련된 데이터들이다.
+	- Test - V62
+	- 'card1','card2','card3','card5' aggregation 추가  - V63  - 커널이 죽는다.
+	-  DayOfYear 추가  -- V66   -- LB 0.9494 / CV 0.97695
+	- V66+ProductCD / M4별 Target 비율 추가 V68 -- LB  0.9493/ CV 0.97695
+ 	- V68+DeviceInfo ,컬럼 추가 --V69 -- Memory 에러 발생 - 커널 분리하자 71  - CV를 쪼개자
+	- V69'P_emaildomain', 'R_emaildomain'  binning  -  - LB : 0.9476 / : CV 0.977273
+   	- V68 + Fillna 제거 버젼 V77
+  	- Device Info 제외 V81 -
+	- V66 + New column V86 -  LB 0.9490 /CV 0.9763
+	- V66 + 상관관계 큰거 제외 -V85--- LB 0.9486 / CV 0.9757
+
+https://www.kaggle.com/felipemello/why-your-model-is-overfitting-not-making-progress
+
+
+- 컬럼을 좀 지워볼까?
+	- Feature importance 낮은것들 다 지우자  -- 68개 지운다 평균 100미만 - ㅍV88*-
+
+	- v66 + Fill na  medoian 대신 -999   -V89  -- 망
+
+
+25. 신규 컬럼 추가  
+	1. uid별 transactionamt aggregation (i_cols+= transactionamt
+	2. cardid drop --uid2와 중복   
+	3. card1 len
+		---- V66 기반 + V100~104----
+
+26. training set에서 uid5 기준으로 100% fraud 였던 애들 을 0.99로 변경하여
+    제출한 결과, 0.002 포인트 떨어졌다.  - 0.99가 아니라 0.5로 변경했으면?
+
+27. blending한 결과  0.9494 → 0.9507 로 상승했다.
+    좀 더 다양한 결과가 있어야지 더 오를 것 같다.
+    모델링을 다양하게 하고나서 합쳐보는 것도 좋은 방법이 될듯 하다.
+ 
+28. 이제 뭘 해야하나??
+	- 0.9518 추가해서 blending 하기  -- Blending kernel V3  0.9519
+	- 영향성없는 애들 삭제하기 - V95~99 - Inference Kernel V5 -- 0.9477  -- 삭제하면 안된다.
+	- uid 별 fraud 비율 추가하기 -V105*- CARDID 별로 is fraud를 만들어두고 test에도 붙여보자
+	
+	- 가중평균 하기 - -- Blending kernel V3  -- 0.951
+	- uid별 Fraud 비율 추가 
+		null 값을 채운것과 채우지 않는 것으로 오늘 보내자.
+	  	Null 값 채운것 : V1, V2  - LB 0.8135 / CV 0.9930  -- 최악의 Overfit 이다.
+          	안채운것 V3
+		-  >  Validation Set까지 외워버렸다.
+	  - 지금 있는 컬럼들 중에서도 그런 것들이 있을 것이다.
+	- uid별 Transaction AMT만 추가한것  - V4
+		-
+	- Null >0.8 인 컬럼 67개 삭제 -- V5 0.9488 --> 삭제하면 안되겠다.
+	- early stopping 500 → 100 변경 
+
+29. Overfitting을 피하기 위해 Grid searchfmf goqhwk
+     : num_leaves : 256  
+	- 256 , 500 해봤는데 모두 0.9494보다 낮았다 (0.9488 정도)
+	위로도 한번 늘려볼까?  
+     : max_depth :-1 , 20  50 70 90 100 
+
+
+blending 
+  - Weighted 가 오류가 있었다 다시 제출 - V4 : Weighted. 0.9522
+  - 0.9518과 0.9494 를 7:3의 비율로 섞어서 제출해보자  - V4  0.9518보다 높은가? weighted2. 0.9520
+  - Gmean을 Top20 → Top 5만 해보자 (0.9519 → ??)  . 0.9526
+Feature selection
+  - Randomforest 활용 -V11 , v12,,   V12가 성공한다면 V2만
+
+30 Null 값 채우면 0.9493이다.  컬럼 삭제 말고 null을 좀 잘 채워보자
+카드 아이디 별로 널을 채워볼까 -- 카드 아이드별로 Null을 채우면  0.9492 이다..
+
+31. Feature selection 이어서 하기 V15
+    현재까지 Delete된 58개 삭제하고 결과내보기 V16   0.9476  -- 떨어진다...
+
+32. CV 횟수 늘려보자  5 → 10   V17 0.9492  --- 오히려 떨어진다.
+    신규 컬럼 추가(CV 5) : Unique Dates = V18  --- 실패
+    Null Count 추가 V19 - 0.9493 유지
+    blending 5개(0.9526), 2개 0.9524  7개는?  V6 0.9525
+   uid 3별 is fraud 비율 >0.95 인것을 1로 바꿔서 Feature추가 0.9474
+
+33. uid5 와 관련된 것들을 지워보자
+    Dayofmonth 추가 -- 이게 Day
+    uid를 다 지워보자 V21
+    card 삭제 - V22
+    ProductCD 삭제 -V23
+    - 삭제 해도 무방하다   -V25
+
+34. XGBoost V01
+
+
+25.   min, max, mean, std, skew, kurt, med
+새롭게 접근을 해야하겠다. !
+- Feature fraction을 키워보자  -V28 0.9487 더 떨어진다.
+ - 학습할때 얼만큼의 데이터를 쓸거냐(매 Tree 생성시)
+- 로지스틱 Regression을 앙상블에 활용해보자
+- Keras로 NN 모델링
+- 
+- 학습할때 AUC를 빼고 해보자 - Overfit을 만들어낸다.  -V 30  0.9484 -- Underfit 된다.
+- day를 지워보자
+- 0.9494 *4  ? 
+
+https://www.kaggle.com/felipemello/why-your-model-is-overfitting-not-making-progress
+이거 해보자
+
+
+- EDA를 다시 하자 내가 하고 싶은데로그냥 하자
+  No Copy, Just make my own view
+- 메모리 size 줄이는게 함정일 수 있다.
+- Minification  단계부터 다시해보자.
+- Kfold를 Shuffle로 하지말고 월을 기준으로 나눠보자 - Timeseries와 무엇이 다른가?
+- V 컬럼
+- Null이 포함되어 있으면 자동으로 Float64로 read 하기 때문에 Pandas가
+  불러올때 Null이 포함된 Int 컬럼은 Int가 되도록 설정하는것도 방법이다.
+   https://www.kaggle.com/mhviraf/reducing-memory-size-an-alternative
+- No identity -- 쓸만한게 없어서 안썼다???
+- Normalization?
+- fraud를 분류한다? 
+
+Make ground baseline with no fe
+Make a small FE and see I you can understand data you have
+Find good CV strategy
+Feature selection
+Make deeper FE
+Tune Model (crude tuning)
+Try other Models (never forget about NN)
+Try Blending/Stackin/Ensembling
+Final tuning
+
+
+
+9/10 새로운 접근 시작
+
+1. Transaction DT만 손보고 Baseline 제출하기(Indentity 포함X) - V2 CV 0.8872 LB 0.9179
+   말일(day>25) 컬럼 추가  -V3 CV 0.88722
+   Reduce mem -V4 
+2. 2~3월달을 잘 맞춰야한다! 그게 핵심
+   Reduce mem 적용 V6 - CV 0.88721 LB 0.9186(오류포함) 
+    ->  Reduce mem을 적용하는게 더 좋다. Int를 제외한 나머지도 한번 체크해보자.
+    -> 분명 변경되는 컬럼이 있다.  변경되는 컬럼 81개를 제외하고 다시 제출
+	 -- V9 : CV 0.8872 LB 0.9179
+
+3. uid 1~6 추가 -- V11 -- V12 CV 0.8882(+0.01) LB 0.9210 ( +0.0031)
+   uid 1~6 추가 + card2~6 제거 V16 ; CV : 0.8816(-0.0066) LB 0.9140   --- 제거 하면 안되겠다
+   uid4 별 mostproduct 추가 -- V17 CV : 0.8808(-0.0008) LB 0.9076   -- Overfit 된다. 제거
+   uid 7,8,9,10 추가 -- V26 CV :0.8885 (+0.0003)  LB : -- 다 추가하는 걸로 
+   uid 7만 추가 -- V27 CV 0.8883 (+ 0.0001)
+  
+   (uid1~6기반) card1_addr1 추가 -- V29 CV 0.889115 (+0.0009)
+
+
+4. D1~D3 채우기 : D2,D3만 0으로 채웠다 D1이 0일 때 --V31 CV : 0.88856 (+0.0003)
+   V컬럼 묶기 
+	train['V1_11'] 추가 - V38 CV : 0.889419 (+0.00085)
+	train['V12_34'] 추가 -V39 CV : 0.888234 (-0.0012) -- 제거 ?? ?? 
+	train['V35_52'] 추가 -V40 CV : 0.888552 (+0.0003) 
+	train['V75_94'] 추가 -v41 CV : 0.888574 ( +0.00002)
+	V1~V94 를 삭제 한것 V42 CV 0.889310 (+0.0008) 
+	
+   현재까지 Base line  V44 0.88935(+0.008) LB 0.9182 (-0.003)
+   V44 + train['V95_137'] 추가 - V45 CV 0.890315 LB 0.9206 (+0.0002)  -- Base Line
+	 train['V138_152'] 추가 - V46 CV 0.889653 (-)-- 제거
+   V44 + Last Transaction Date 추가 - V47 0.88883(-0.001) drop
+   V44 - train['V12_34'] - train['V35_52'] - train['V75_94'] - V48  0.88879 (-) --drop
+   V45 - train['V12_34'] -- V49 CV 0.88958(넣는걸로) -- Drop
+   V44 + M1,2,3,5,6,7,8,9 합치기(null N)  -V50 CV 0.88936 -이득 
+   	각 컬럼 제거  V51 -0.88837 Drop (
+	---------------- ['V95~137'도 제외하자'] - V 컬럼 EDA 적용 예정
+
+V53 -- 데이터 받기 위함
+5. **Base line : V1~11  합쳐서 제거 하고 나머진 유지 + M 컬럼삭제 안함 - V54 : CV 0.88778
+   V 컬럼 EDA 적용    (V95~137 / V202~268/ V293~318) 
+     - V126~137(누적 지불액)  / V95~106(누적횟수 조건별) = 평균 지불액 - V55 CV 0.88875(+0.00097)
+     - V202~V216 / (V167~V182, V176빼고)  - V56 CV 0.88800 ( - 0.00075) -drop
+     - V263~268 / V217~V222  - V57 0.8879(-0.0001) - drop
+     - V306/307/308/316/317/318 / V293/294/295 --V58 0.88801 (+0.0001)
+
+6. **Base line V35~94 도 합쳐서 제거하자 - V59 (V58대비) 0.889514 (+0.0015) LB 0.9217 (+0.0077)
+     -  int(D8-D9) : new_D8 V60 CV 0.888758 (-0.0001) - drop
+     - PCA V1_11 -- V61 CV 0.888669 (-0.0001) - drop
+     - PCA V12_34  -- V62 CV 0.889289 (+0.0006)
+     - PCA V75_94 --V65 CV 0.891459 
+
+   V202~V268/몇개 제거  -- V65 - Base Line CV0.891459
+   + Parameter 업그레이드 --V 66 CV 0.91179  LB : 0.9357 - Base Line***  - Fold 5의 auc와 비슷
+
+
+
+7. Count - Card1,2 encoding  -- Frequency_encoding
+   - train['card1_count_full'] 추가 -V67  CV 0.9049(-0.007) - Drop
+   - train['card2_count_full'] 추가 -V68 CV 0.91439(+0.00949)
+   - train['uid1_count_full'] 추가 -V69 CV 0.91303 (-0.00136 ) - Drop
+   - train['addr1_count_full'] 추가 - V70 CV 0.9135 (+0.0005)
+   - uid2 - V72 CV 0.9140(+0.005)
+   - uid3 - V73 CV0.9135 (-0.005) - DROP
+
+8. 최근 5일간 거래액 통계  V73기반  CV 0.9135
+   - card2 기준 - V74 CV 0.9149(+0.0014) - DROP
+   - uid1 기준 - V75 CV 0.9166 (+0.0031)
+   - uid2 기준 - V76 CV 0.9164 (0.0029)
+   - uid3 기준 - V77 CV 0.9166 (+0.0031)  
+   - uid4 기준 - V78 CV 0.9174 (+0.004) LB 0.9383  - 채택**
+   - addr1 기준 - V79 CV 0.9146(+0.~~)- DROP
+   - uid 1~4 다 넣고 비교해보자 - V83   CV 0.9172 (+0.0038) - drop
+
++ 원래 커널 결과비교 -- FOLD 방법을 바꿨더니 LB가 0.0022 감소했다.
+
+9.  baseline  V78 CV 0.9174 (+0.004) LB 0.9383  **
+   - Identity 쌩 raw를 넣어보자 - V86 CV 0.9205(+0.0031) LB 0.9380 ** 5fold 0.9383
+   - id3,4/5,6,/7,8을 묶고 기존 컬럼 삭제 - V88 CV 0.9184 (-0.002)-drop 
+   - id35~38 묶고 기존 삭제 -V90 CV 0.9179(-0.0005) -drop
+   - id17, 19, 20 묶고 기존 삭제 - ip17~20주소 - V91 0.9140(-0.004) -drop
+   - id21,22 묶고 기존 삭제 - ip21_22 -V92 - 0.90846(-0.006)-drop
+   - id24,25,26 묶고 기존 삭제 -V93 -0.9148(+0.006) **  --IP
+   - uid4별 id31 fq - V94 - 0.91755(+0.003)**
+   - uid4별 id33 fq encoding - 해상도  - V95 0.9097 (-0.0008)- drop
+   - uid4별 device type - V96 0.9156 (+0.005)**
+   - uid4별 device info - V97 0.9187 (+0.003)**
+   - uid4별 ip주소(17~20) - V98 0.9184(-0.0003)
+   
+   - uid4별 ip 21~22 -drop
+   - uid4별 ip 24~26 -drop
+   - uid4별 ProductCD    V99 - CV 0.9117 -drop
+   - uid4별 id삭제 안한 버젼 -- V100 - 0.9234  -- 채택 다 넣고 기존거 삭제 안한걱 **
+        -v99,v98은제외
+10. Base line V98까지 결과 반영 V101 - CV 0.9187 -- base line 변경
+   - uid4별 Fqencoding추가 P_emaildomain V102 - 0.9188
+			   R_emaildomain V103 - 0.9168 -drop
+
+   - Transactionamt_decimal V104 0.9202 5fold 0.9389 
+   - 'id_02__id_20' V105 0.9193 -drop 5fold 0.9384 drop 
+
+   -  'id_02__D8' V106 0.9193 -drop 5fold 0.9382 drop
+   - 'D11__DeviceInfo' V107 - 0.9161 -drop 5fold 0.9385 ******
+   - 'DeviceInfo__P_emaildomain' V108 -  0.9195 5fold 0.9386 ******
+
+11 Baseline1  V100 + 102+ 104+108 =V109   **CV 0.9232(+0.0058) LB 0.9364(-0.002)  5fold 0.9379
+   + 'P_emaildomain__C2' V110 CV 0.9223(-0.001) drop 5fold 0.9387 *****
+   + 'card2__dist1' V111 CV 0.9193 (-) drop 5fold 0.9384
+   +  'card1__card5' V112 CV 0.9208(+ 0.001) ** drop 5fold 0.9374
+   + 'card2__id_20' V113 CV 0.92137(+0.001)** drop 5fold 0.9373
+   + 'card5__P_emaildomain' V114 0.9204 (-) drop 0.9389 *****
+   + 'addr1__card1' V115 0.9213 (0.001)** 
+
+
+12. Base line  V116  CV 0.9210 -- V109번으로  Baseline잡자
+   - id_34, id 36 count V118 - CV 0.9204 (-)
+   - id_02, D15  mean/std per uid   V119 CV 0.9186(-)
+  
+
+13. fold1이 학습이 안되는이유는?  Base V109
+   - StratifiedKfold -- Baseline ** V127          CV 0.9229  LB 0.9374
+   - StratifiedKFold -> KFold로 변경  V128  **    CV 0.9439  LB 0.9409 ***********
+   - StratifiedKFold->TimeSeriesSplit 벼경 V129   CV 0.9300  LB 0.9269
+  ** 그동안 학습이 잘 안되고 있었던듯 하다. KFold로 변경하자
+
+   - StratifiedKfold + uid에 대하 D1~15 aggregation(uid4) V130 CV 0.9238 ***
+   - StratifiedKfold + uid에 대하 C1~15 aggregation(uid4) V131 CV 0.9227
+
+14. KFold (V128) + Sort_value 추가 V132 0.94417 (+0.0002) *
+                 + fillna(-999) 추가 V133 0.94407  -- drop????
+
+15. Base Line V128 + 130 + 131 : V134 (V133 + 130/131)  - CV 0.94472 (+0.0007) 5folds 0.9408 
+    - C1~15 aggregation 제거 V135 : CV 0.9449  LB  0.9439  5folds 0.9410
+    - uid10에 대한 D, C aggregation V 136 CV 0.9473 LB?           
+    - V136 + C agrregation 제거 V137 CV 0.9473 (영향 없음)
+    - 그동안 삭제했던 컬럼 다 추가해보기 V138 # Test CV 0.9467(-0.001) : 2월을 빼면?
+    - V136+ Fold 10으로 늘리기6->10 V139 CV 0.9523(+0.005) LB 0.9453  ** Base Line
+
+16 uid 더해가면서 테스트  V139 CV 0.9523(+0.005) LB 0.9453  ** Base Line
+   - 다 죽어버렸다. 다시하자 Down받아서
+   - New Approach2 생성 - V1 CV 0.9523 
+   - u10 min_last - V2 CV 0.9524  (+0.0001)           매우 오래 걸린다.앞에 넣어두자
+   - uid 10 에대한 ID_31, devicetype,info, email count - V3 CV 0.952569(+0.0001)
+   - uid 4,7 Frequency encoding - V4 CV 0.9526  +0.0001)
+   - uid 9,10 Fq encoding - V5   CV 0.9527 (+0.0001) LB 0.9454 
+   - uid4,7 + ProductCD encoding -V6 CV 0.9525 (-0.0002) drop
+   - uid9,10 + ProductCD encoding - V7 0.9526 (+0.001) LB 0.9452
+    - uid9 +D  aggregation -V8 - CV 0.9523(-0.0003) drop
+    - uid7 +D  aggregation -V9 - CV 0.9522(-0.0001) drop
+
+17. V139 + startdate 변경 : 20171130 + uid min_last 반영 V157 
+    (Train,test 데이터 다시 받는것)
+
+18. Base Line  V10 CV 0.9524  - Productcd encoding 제외하자
+   - train['TransactionAmt_grouping']  V11 0.95246    10folds 0.94952
+   - train['dayofyear_block']  V12 0.9527(+) 10folds 0.9497 
+   - train['day_block'] V13 0.9525 -()  10folds 0.9499  ---확실히 보이는데 넣으면 CV가 떨어진다.
+   - train['hours_block'] V14 0.9526(+) 10folds 0.9503  LB 0.9453
+   - Transaction-card1 V15 0.9524 (-) 10folds 0.9491
+   - Transaction-uid1 V16 0.9527 (+) LB 0.9459 10folds 0.9493
+   - Transaction-uid4 V17 0.9524 (-)10folds 0.9496
+   - Transaction-uid9 V18 0.9525  LB 0.9460 10folds0.9493
+
+19 base line V19 (785,99) CV 0.9523
+   num_leaves 변경 650 V20 0.9526  LB 0.9462** 채택
+	           750 V21 0.9523
+                   850 V22  0.9525
+   seed 변경 (785 99) 
+	seed 256  V23 0.9527
+	seed 199 V24 0.9526
+ 	seed  42 V25 0.9525 
+        seed  79 V26 0.9529 LB 0.9462 ** 채택
+        seed 49 V27 0.9526 
+   split 늘리기(99) 10 -> 15 
+
+20 base line (650, 79)  V29 CV 0.9528
+   - card1 FE V30 CV 0.9530
+   - card2 FE V31 CV 0.95301 LB 0.9463 - 채택 
+  - card3 FE V32 CV 0.9528 - drop
+   - card4 FE V33 -error
+   - card5 FE V34 -error
+   - uid10 + Transaction AMT_Grouping FE V35 -error
+   - uid10 + dayofyear_block FE V36 -error
+   - uid10 + hour_block FE V37-error
+
+   기존 것 + Fold V34
+
+21. base line V40(-1) - LGBM CV 0.9530       
+        depth -1+ Categorical로 변환 V42 0.9530
+        heavy dominated columns(>0.9 1, 0) 정리 V44 0.9527  - drop
+		categorical columns 84 →202
+
+        Reduce + V52 CV 0.9529 LB 0.9458-- Reduce 하면 drop 된다.
+
+    catboost v47 에러
+    catboost +Fold6 V48 에러
+    reduce + Fold10 V49  에러
+    reduce + Fold6 V50 에러
+   catboost V04 -CPU  CV 0.9453 LB 0.9424  Q1 0.9411  Q3 0.9413
+     
+    
+
+22. baseline(lgbm)  CV 0.95301 LB 0.9463 
+     각종 Frequency encoding LGBM  V15 CV 0.95326(+) 
+    Reducing the gap between CV and LB(ks_2samp) - 컬럼 33개 Drop  V16 CV 0.9518  LB 0.9469
+    Highly correlated features(>0.98) V17  CV 0.9513
+    One_value_cols  V25 CV 0.95149 
+     big_top_value_cols > 0.98 V26 0.95130 LB 0.9474**
+    KS2 제외 17,25,26  -> V27 0.9526
+        + V29 (dayofyear추가 ) CV 0.9516 LB 0.9472 
+    
+    V19 + catboost(LR 0.07) V23 0.9510
+        + catboost(LR 0.05) V24 CV 0.9516 LB 0.9457
+        + highly Correlation 제외+ LR 0.07 V 28
+        + Higly correlation >0.99 제외 V
+
+    기존 + KS_2samp + Highly Correlated features  V37
+    
+23 컬럼을 삭제해서 CV와 LB 점수를 맞춰나가야한다!!
+   LGBM  V26 0.95130 LB 0.9474**
+         correlation >0.99 제외 V32 CV 0.9513 10fold 0.9473
+          컬럼 몇개 더 삭제 V33 CV 0.9513 10fold 0.9473
+
+         drop 된것들 추가 
+         >0.98 + 과거 Drop된 컬럼 추가 V42 CV 0.9513 10fold 0.9470 
+         ('D11__DeviceInfo' 'DeviceInfo__P_emaildomain' 'P_emaildomain__C2'
+         'card5__P_emaildomain') +day_block 
+         
+
+   CATBOOST V35+ Higly correlation >0.99 제외 ---
+               + LR 0.07   기존 + KS_2samp  V41???????????????
+   
+   기존 Base line V34  CV 0.9459 5fold 0.9409 LB 0.9493
+   기존 + KS_2samp  CV 0.9418 5fold 0.9381
+   기존 + KS_2samp + Highly Correlated features V38 CV 0.9422 5fold 0.9393 LB : 0.9460(-)
+   기존 + 10fold   V39 ?????????????
+   -----기존 + 10fold + + KS_2samp + Highly Correlated features 
+
+24.base line V42 CV 0.9513 10fold 0.9470 
+    잘 못맞추는 애들을 찾아보자 V43
+    _train['uid10__grouping'] 추가  V45 (V48) CV 0.9515 5folds 0.9477
+     -- uid10을 좀더 세분화 시켜준것 : 누적 타임 기준으로
+    uid10_grouping + Frequency encoidng V47 ??? CV 0.9517 9folds 0.9472 
+
+    grouping 세분화 V49  CV 0.9519 10fold 0.9485 LB 0.9473???????????
+      - D15 ==0 이면 D8을빼기
+      - D15 -D10 -D8- D2
+
+
+    (기존LGBM) + uid4_grouping V41 CV 0.9462 5folds 0.9417  LB 0.9492****
+                 
+
+25. 다시 하기 + blending V8 제출 LB 0.9531
+
+    uid10_Grouping + 최근 5일 통계  V50 CV 0.9521 9fold 0.9474 LB 0.9475************
+    TransactionAMT /C1 : 개당 가격 +int(개당가격) + decimal V51 CV 0.9519 10fold 0.9476 LB 0.9473
+    Uid10_grouping + D mean, std V52 CV 0.9544 10fold 0.9501 LB 0.9460
+    Uid10_grouping + TransactionAmt mean_std V53 CV 0.9549 10fold 0.9508 LB 0.9456
+
+    Uid10 기준 마지막 거래일자?
+
+   D15 -D10 - D2 - D14 -D12
+   ProductCD 추가 하여 Agrregation
+   TransactionAMT /C1 
+   D1,D2D3== 0  ->1 else 0 신규
+
+    uid10_grouping 기준으로 aggregation??
+    + 시작 시간 바꾸기
+
+
+
+26. 다시하기 V07 CV 0.9496 10folds 0.9457 LB 0.9460
+    dayofyear 추가 V08 
+    상관관계 제거 V09 0.9465
+    parameter에 category 추가 V13 ??????????
+
+    Catboost V15 ??????
+
+    New Approach3 Categorical feature 추가 -- 메모리 한계 V58  LB 0.9358
+
+
+
+본래 것 ; Earlystop 500 → 1000  V55
+
+27. Null을 채워보자 - uid11 기준으로
+
+
+
+28. uid10-grouping 기준으로 is_fraud 평균을 내보자 + 분산까지 -- 오버핏
+    
+
+
+
+
+
+S- D2 
+R D8
+W D10
+C D8
+H - D8
+D15 -D10 -D8- D2
+ 
+
+
+
+26. 다시하자  V5
+
+
+
+
+
+
+
+
+
+
+uid10 안에서 transactionid로 sort 하고 현 V204(V308) -transactionamt = 이전 v204이면 이전 것과도 비교
+해보고 같으면 uid10+
+V204기준으로 Sort?
+   
+   D15-dayofyear가 비슷한 애들이 한 묶음 아닐까? +- 5일
+   X
+
+
+
+
+
+
+
+
+
+
+
+22. LGBM  : DEPTH 변경
+    CATBOOST DEPTH변경
+   Heavy dominated columns : 
+
+
+   remove columns
+
+    depth 변경 10
+                   50
+                  100
+                  200
+     
+
+
+-- uid9+Product CD 별 Amt mean/std
+-- dayofyear를 짝 홀로 나눠볼까
+-- ??
+- Day/Night로 구분? 비율이 어떻게 되나? - 월별로는?
+- startdate를 30-11-2017로 변경 ** 12/1일부터 데이터
+- Hour를 4개씩 6개로 추가 Grouping 0~3: block1, 4~7 :block 2 hour_timeblock
+왜 Dayofyear가 importance가 높을까?
+- day_block >27  : 2.9%vs 4.7% -- 12,1월은 2.9vs 4.7
+
+_ dayofyear_block - 10일 단위로 Grouping : 
+
+- TransactionAmt_grouping 
+- hours_block 
+- TransactionAmt mean,std 등 by ['card1','uid1','uid4','uid7','uid9']  
+
+---------------------------------------
+
+19. Fillna 999->-999
+오후 7:53 2019-09-15
+- C1,C2,C13 Frequency encoding uid9 기준?
+
+- Card1,2 FE 
+-------------------
+
+
+- uid10 기준으로 일평균 거래량?-- Frequency encoding됨
+
+
+
+    - uid10 min_last 추가 V148
+    - uid9 V149
+    - uid7 V150
+4,7,9,10
+    - uid 10 에대한 ID_31, devicetype,info, email count V152
+
+    - uid 4,7 Frequency encoding  V153
+    - uid 9,10 Fq encoding V154
+    - uid4,7 + ProductCD encoding V155
+    - uid9,10 + ProductCD encoding V156
+-    -
+
+ uid10에 대한 Last transaction min Lastday?
+ - 날짜를 좀더 쪼갤순 없나?
+
+
+
++ 이전 컬럼들 다 넣고 다시 테스트 
+
+오후 12:15 2019-09-15
+Card1에 대한 card2,3,4,5,6 + ProductCD , Fq encoding
+uid10으로 frequency encoding 하자 uid1~10 다 하자
+uid 4 + new column  : new를 1쭉 번호를 매기고  uid에 반영하는것
+     new라고 적힌 것은 cardid가 다를테니까
+분할하기 -id30 나누고, 해상도 나누고, 등등
+** 표준화하기  df[col] = ( df[col]-df[col].mean() ) / df[col].std() 
+
+
+
+** 날짜가 뒤로갈수록 Fraud 비율이 낮아진다.
+ 
+** isFraud에 대한 정의 : 사기가 아니라 불만일 수 있다.
+** Card1에 대한 card2,3,4,5,6 + ProductCD , Fq encoding
+  card1 = cardid, card2 = bank? , card3 = country , card4 = company of card
+  card5 = software company like alipay 
+
+** 한번 사기로 식별된 카드와 연결된 모든 거래는 사기로 표현되나 정확한 카드 정보를
+   넣어두진 않았다. 카드 정보의 일부만 찾을 수 있습니다 (처음 몇 자리, 은행 식별 번호).
+** 국가는 북미, 라틴 아메리카, 유럽을 포함한 다른 국가
+** 사기가보고되거나 연결되면 특정 결제 카드, 사용자 계정 또는 전자 메일 주소 (때로는 고정 IP 주소)와 같은 자격 증명이 블랙리스트에 추가됩니다.
+** 보고 된 지불 거절은 카드, 사용자 계정, 관련 이메일 주소 및 이러한 속성에 직접 연결된 거래를 사기 거래 (isFraud = 1)로 정의합니다. 120 일 후에도 위의 사항이 발견되지 않으면 합법적 인 것으로 정의합니다 (isFraud = 0).
+
+ ->  card1~card6가 모두가 같아야한다. - uid4가 맞다.
+ -> uid10으로 frequency encoding 하자 uid1~10 다 하자
+ - > uid 4 + new column  : new를 1쭉 번호를 매기고  uid에 반영하는것
+     new라고 적힌 것은 cardid가 다를테니까
+
+**NAN processing
+If you give np.nan to LGBM, then at each tree node split, it will split the non-NAN values and then send all the NANs to either the left child or right child depending on what’s best. Therefore NANs get special treatment at every node and can become overfit. By simply converting all NAN to a negative number lower than all non-NAN values (such as - 999),
+  -> LGBM은 NULL을 처리해주지 않으면 Null을 제외하고 Split을 한 후에
+    Null을 양쪽에 할당해준다.  df[col].fillna(-999, inplace=True)
+df[col].fillna(-999, inplace=True)
+
+** 분할하기 -id30 나누고, 해상도 나누고, 등등
+** 표준화하기  df[col] = ( df[col]-df[col].mean() ) / df[col].std() 
+* W는 오프라인 트랜잭션 - ID가 없다.
+* dist1이 실제 거리와 같고 dist2가 "온라인 거리"임을 나타냅니다.
+
+** isFraud 정의 : 상품이 좋지 않아서 반품 되는 경우도 포함 :이건 card가 문제가 아니지
+
+
+the definition of isFraud from host Vesta is:
+charge back
+even the customer is the legal owner of this card,
+he can charge back if the quality of the goods he received is not good or destroyed during transportation, such as fragile Glass bottles(it's integral before transportation)
+or
+Rotten fruit(it's fresh before transportation).
+or
+Some beautiful clothes which are NOT so perfect as decripted by the merchants online.
+
+Also,in alibaba and other websites,many merchants give the service:
+"Return of goods without reasons within 7 days",
+you can tell the third-party software to reject to pay for the goods.
+* 알려진 Feature들을 가져다가 넣어보자
+* C1~C14 ,D1~D15 encoding : mean/std, max, min ㅡ uid aggregation 참고
+* Null Value 채우기?
+
+
+
+
+card1:ID
+
+card2:bank-branch in some place(NOT bank)
+because many value has similar frequency
+if a bank-branch don't have so much customers,I think it will be closed.
+So I guess each bank has similar amounts of customers.
+
+card3:country
+because distribution of card3 is similar to dist2
+
+card4:company of the card
+
+card5:
+bind to third party software which hold your money before you receive your goods ，ｅ.g. alipay(支付宝) ，PayPal or else
+because some value has the far greater frequency than others.
+Note that Vesta (the host of this competition) is also the third party software company.
+
+card5 has totally 120 values.
+I guess this maybe encoded from which website or app the customer use with the 3rd-party software.
+There are some websites or app is well-known but the others are not common used.
+
+card6:credit/debit
+
+10. Freqence encoding-- 구체적 계획 필요
+   - uid4별 ip17~20 Fqencoding -
+   - uid4별 ip21~22 Fqencoding
+   - uid4별 ip24~26 Fqencoding
+   
+-------------------------------------------------------------
+* identity 컬럼 EDA
+
+- id_15: 신규 - new / 기존 - Found / 모름 Unknown / 정보 없음 
+- id_16: 신규 - Notfound / 기존 - found
+- id_28/id29 :신규 - Notfound / 기존 - found
+
+- uid별 id_31 / device info count : chrome63 에서 몇번 결제했는지
+  - id17&id19&id20 :: 합치자 : ip 주소일 수있다. (삭제까지)
+  - id 21&id22 : 합치기 ip
+  - id 24/25/26 합치기
+  -uid별 ip 주소 카운트
+  - device type, deviceinfo도 카운트
+- id33 -해상도를 의미한다 - 핸드폰을 유추해볼 수 있다.
+      - uid별 count를 만들자
+  - id3,4 / 5,6 / 7,8 /9,10 을 묶자
+  - id35~38 merge(TFFT 1001)
+
+
+- ip 기준 평균 거래액 , Count 등등
+- uid별 Product CD
+
+
+-------------------------------------------------------------
+
+
+V73 + M encoding : M_sum / M_na  
+
+
+   # of null 추가 
+
+8. ID 추가 - V71 다운로드용
+
+
+train['nulls'] = train.isnull().sum(axis=1)
+test['nulls'] = test.isnull().sum(axis=1)
+
+6. D8,D9?  int(D8-D9) 추가  : 어느 시점부터 지나온 일자
+ D9는 D8의 소수점이다  - D8, D9는 시간을 의미하는데 단위는 일 이다.!!!
+ D9는 시간을 의미한다.  
+  D8은 어디서부터의 시간을 나타내는 걸까?
+
+6. C1~C14 : 누적을 만들어보자  Card1-Card2 (uid)? +Production
+- V1~V94 : PCA 해보자
+
+
+
+6. V1~95  EDA - 그냥 합치자  
+
+V34~
+
+
+
+
+     - 누적 카운트는 남겨둘까?
+
+   uid1(Card1+card2+addr1) + Product CD 평균 C1,C2, Transaction mean ,std
+   
+    C2 : 거래횟수?  구매량?
+   이전V127+현재 126 = V127? 
+   V128 다음 거래액?
+
+   V202 :이전 거래액  
+   V263 : 이전 거래액
+   V264 : 누적 합계
+
+
+---------------------------
+    V95 : 누적횟수
+   V96 : 누적횟수 (조건1)
+   V97 : 누적횟수 (+조건2)
+   V98
+   V99 
+   V100
+   V126 : 최근 3거래 누적 합계  /V95
+   V127 :최근 3거래 누적 합계 (조건1) /V96
+   V128 :최근 3거래 누적 합계 (+조건2) /V97
+   V129  /V98
+   V130  /V99
+   V131  /V100
+
+   V101 : 누적횟수
+   V102 : 누적횟수 (조건1)
+   V103 : 누적횟수 (+조건2)
+   V132 : 최근 3거래 누적 합계 /V101
+   V133 :최근 3거래 누적 합계 (조건1) /V102
+   V134 :최근 3거래 누적 합계 (+조건2) /V103
+
+V135 / V104
+V136 / V105
+V137 / V106
+
+---------------------------
+V202~216 /V167~181 
+167~201 :35개
+
+** V202~V216/ (V167~V182, V176빼고)
+V202/V167
+V203/V168
+V211/V177
+V212/V178
+V213/V179
+
+** V263~268 / V217~V222
+
+
+
+
+---------------------------
+** V306~V321
+   V293 : 누적횟수(일)
+   V294 : 누적횟수(주?)
+   V295 : 누적횟수(???)
+
+   V306 : 누적 거래액(일?) /293
+   V307 : 누적 거래액(주?)/294
+   V308 : 누적 거래액(  ) /295
+
+
+   V293 : 누적횟수(일)
+   V294 : 누적횟수(주?)
+   V295 : 누적횟수(???)
+
+   V316 : 누적거래액(일?)
+   V317 : 누적거래액(주?()
+   V318 : 누적거래액(?
+----------------------------
+   V135/V139(V293) = 이전까지 평균 거래금액
+   V280/V279
+   
+
+   uid9 + product
+   date - (D1-D3) 마지막 Date - 해당 카드 이력이 있는지?
+
+V43  분석용 데이터 다운
+
+V21 - Train 데이터 받기
+V23 - X_train 모델 Prediction
+ V53 - V no drop  EDA
+
+
+25. 나중에 Grid search가 필요하다
+
+
+    
+Log 남기기
+
+
+
+- 앙상블할때 산술,기하평균,가중평균과 median값을 
+
+19. gridsearch 해보자
+ 
